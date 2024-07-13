@@ -1,0 +1,871 @@
+<!doctype html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<title>Go SDK</title>
+
+	<link rel="stylesheet" href="dist/reset.css">
+	<link rel="stylesheet" href="dist/reveal.css">
+	<link rel="stylesheet" href="dist/theme/simple.css">
+
+	<!-- Theme used for syntax highlighted code -->
+	<link rel="stylesheet" href="../../plugin/highlight/monokai.css">
+</head>
+
+<body>
+	<div class="reveal">
+		<!-- <div class="toolbarContainer">
+			<div class="toolbar">
+				<div></div>
+				<div class="toolbarLinks">
+					<a href="/" style="padding-right: 20px; font-size: large; color: #fff">Home</a>
+					<a href="/presentation/go-sdk/" style="padding-right: 20px; font-size: large; color: #fff">Presentation</a>
+					<a href="/resume" style="padding-right: 20px; font-size: large; color: #fff">Resume</a>
+				</div>
+			</div>
+		</div> -->
+		<div class="slides">
+			<section id="title">
+				<!-- this h1 is important for required autoplay interaction -->
+				<h1>Go SDK</h1>
+				<h2>Up and Running with Azure</h2>
+			</section>
+			<section id="ready">
+				<section>
+					<p style="text-align: left;">
+						In this presentation, I will walk you through my own implementation of the Azure Go SDK that does the
+						following:
+					</p>
+					<ol>
+						<li>Authenticates an Azure user;</li>
+						<li>Creates an instance of a http cpent for making requests;</li>
+						<li>Creates a resource group;</li>
+						<li>And deploys an Azure Resource Management, or ARM, Template</li>
+					</ol>
+					<audio id="readyAudio" controls data-autoplay="">
+						<source src="../../assets/slide-audio/go-sdk/ready_0.mp3">
+						<a href="../../assets/slide-audio/go-sdk/ready_0.mp3">Download audio</a>
+					</audio>
+				</section>
+			</section>
+			<section id="understand">
+				<section>
+					<h2>Understand the Azure SDK</h2>
+				</section>
+				<section>
+					<p>
+						The Azure SDK for Go provides several libraries to communicate with and programmatically manage Azure
+						services.
+					</p>
+					<audio id="understandAudio" controls data-autoplay>
+						<source src="../../assets/slide-audio/go-sdk/understand_0.mp3">
+						<a href="../../assets/slide-audio/go-sdk/understand_0.mp3">Download audio</a>
+					</audio>
+				</section>
+				<section>
+					<p>
+						The SDK is built on top of the Azure REST API. This hierarchy allows you to access the functionality of the
+						Azure REST API directly from your Go programs.
+					</p>
+					<audio id="understandAudio" controls data-autoplay>
+						<source src="../../assets/slide-audio/go-sdk/understand_1.mp3">
+						<a href="../../assets/slide-audio/go-sdk/understand_1.mp3">Download audio</a>
+					</audio>
+				</section>
+			</section>
+			<section id="env">
+				<section>
+					<h2>Setup Local Environment</h2>
+				</section>
+				<section>
+					<p>Click on your operating system below for basic setup links to help you get setup on your system.</p>
+					<audio id="envAudio" data-autoplay controls>
+						<source src="../../assets/slide-audio/go-sdk/env_1.mp3">
+						<a href="../../assets/slide-audio/go-sdk/env_1.mp3">
+							Download audio
+						</a>
+					</audio>
+					<div style="display: flex; justify-content: center; max-height: 250px;">
+						<a href="#/mac"><img src="../../assets/mac-logo.png" alt=""></a>
+						<a href="#/win"><img src="../../assets/windows-logo.png" alt=""></a>
+						<a href="#/linux"><img src="../../assets/linux-logo.png" alt=""></a>
+					</div>
+				</section>
+				<section id="mac">
+					<p>Informational links for Mac</p>
+					<a href="https://support.apple.com/guide/terminal/welcome/mac">Terminal</a> |
+					<a href="https://code.visualstudio.com/docs/?dv=osx">Text Editor</a> |
+					<a href="https://go.dev/doc/install">Go Language</a> |
+					<a href="https://azure.microsoft.com/en-ca/free/">Azure Account</a>
+				</section>
+				<section id="win">
+					<p>Informational links for Windows</p>
+					<a href="https://learn.microsoft.com/en-us/powershell/scripting/overview?view=powershell-7.2">Terminal</a> |
+					<a href="https://code.visualstudio.com/docs/?dv=win">Text Editor</a> |
+					<a href="https://go.dev/doc/install">Go Language</a> |
+					<a href="https://azure.microsoft.com/en-ca/free/">Azure Account</a>
+				</section>
+				<section id="linux">
+					<p>Informational links for Linux</p>
+					<a href="https://tabby.sh/">Terminal</a> |
+					<a href="https://code.visualstudio.com/Download">Text Editor</a> |
+					<a href="https://go.dev/doc/install">Go Language</a> |
+					<a href="https://azure.microsoft.com/en-ca/free/">Azure Account</a>
+				</section>
+			</section>
+			<section data-package="mainPackage">
+				<audio data-autoplay controls>
+					<source src="../../assets/slide-audio/go-sdk/mainPackage_1.mp3">
+					<a href="">
+						Download audio
+					</a>
+				</audio>
+				<h2>Main Package</h2>
+				<pre><code class="r-frame" data-trim data-line-numbers="1|5-9|12-15|19|20|21-23">
+						package main
+
+						import (
+							// import standard library packages
+							"context"
+							"encoding/json"
+							"fmt"
+							"log"
+							"os"
+
+							// import Azure SDK packages
+							"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+							"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+							"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+							"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+						)
+
+						// declare the main function
+						func main() {
+							cred, err := azidentity.NewAzureCLICredential(nil)
+							if err != nil {
+								log.Fatalf("failed to obtain CLI credential: %v", err)
+							}
+
+							ctx := context.Background()
+							subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+							resourceGroupName := "Go-SDK-VM"
+							resourceGroupLocation := "eastus2"
+
+							err = createResourceGroup(ctx, cred, subscriptionID, resourceGroupName, resourceGroupLocation)
+							if err != nil {
+								log.Fatalf("failed at createResourceGroup: %v", err)
+							}
+
+							deploymentName := "deployVirtualMachine"
+							err = deployTemplate(ctx, cred, subscriptionID, resourceGroupName, deploymentName)
+							if err != nil {
+								log.Fatalf("failed at deployTemplate: %v", err)
+							}
+						}
+
+						func createResourceGroup(
+							ctx context.Context,
+							cred azcore.TokenCredential,
+							subscriptionId string,
+							resourceGroupName string,
+							resourceGroupLocation string,
+						) error {
+							resourceGroupClient, err := armresources.NewResourceGroupsClient(subscriptionId, cred, nil)
+							if err != nil {
+								return fmt.Errorf("failed to create resource group client instance: %v", err)
+							}
+
+							boolResp, err := resourceGroupClient.CheckExistence(ctx, resourceGroupName, nil)
+							if err != nil {
+								return fmt.Errorf("error while checking if resource group already exists: %v", err)
+							} else if boolResp.Success {
+								log.Printf("requested resource group already exists and will not be created: %v", resourceGroupName)
+								return nil
+							} else {
+								log.Printf("requested resource group does not yet exist and will been created: %v", resourceGroupName)
+							}
+
+							resourceGroupResponse, err := resourceGroupClient.CreateOrUpdate(
+								ctx,
+								resourceGroupName,
+								armresources.ResourceGroup{
+									Location: to.Ptr(resourceGroupLocation),
+								},
+								nil,
+							)
+							if err != nil {
+								return fmt.Errorf("error while creating a new resource group: %v", err)
+							}
+							log.Printf("resource group has been created: %v", *resourceGroupResponse.ResourceGroup.Name)
+
+							return nil
+						}
+
+						func deployTemplate(
+							ctx context.Context,
+							cred azcore.TokenCredential,
+							subscriptionId string,
+							resourceGroupName string,
+							deploymentName string,
+						) error {
+							deploymentsClient, err := armresources.NewDeploymentsClient(subscriptionId, cred, nil)
+							if err != nil {
+								log.Fatalf("failed to create deployment client: %v", err)
+							}
+
+							boolResp, err := deploymentsClient.CheckExistence(ctx, resourceGroupName, deploymentName, nil)
+							if err != nil {
+								return fmt.Errorf("error while checking if deployment already exists: %v", err)
+							} else if boolResp.Success {
+								log.Printf("requested deployment already exists and will not be created: %v", resourceGroupName)
+								return nil
+							} else {
+								log.Printf("requested deployment does not yet exist and will been created: %v", resourceGroupName)
+							}
+
+							parameters, err := readJSON("parameters.json")
+							if err != nil {
+								log.Fatalf("read template JSON file: %v", err)
+							}
+
+							template, err := readJSON("template.json")
+							if err != nil {
+								log.Fatalf("read template JSON file: %v", err)
+							}
+
+							poller, err := deploymentsClient.BeginCreateOrUpdate(
+								ctx,
+								resourceGroupName,
+								deploymentName,
+								armresources.Deployment{
+									Properties: &armresources.DeploymentProperties{
+										Mode:       to.Ptr(armresources.DeploymentModeIncremental),
+										Parameters: parameters,
+										Template:   template,
+									},
+								},
+								nil,
+							)
+							if err != nil {
+								log.Fatalf("failed to deploy template: %v", err)
+							}
+
+							deploymentResponse, err := poller.PollUntilDone(ctx, nil)
+							if err != nil {
+								log.Fatalf("failed to pull the result: %v", err)
+							}
+							log.Printf("deployment %v was successful", *deploymentResponse.Name)
+
+							return nil
+						}
+
+						func readJSON(path string) (map[string]interface{}, error) {
+							localFile, err := os.ReadFile(path)
+							if err != nil {
+								return nil, err
+							}
+
+							// Blog post about the Map type
+							// https://go.dev/blog/maps
+							mappedJSON := make(map[string]interface{})
+
+							// Blog post about the unmarshal function
+							// https://golang.co/how-to-unmarshal-json-in-go/
+							err = json.Unmarshal(localFile, &mappedJSON)
+							if err != nil {
+								return nil, err
+							}
+
+							return mappedJSON, nil
+						}
+					</code></pre>
+			</section>
+			<section id="resourceGroups">
+				<p>
+					The next step with the SDK will be to create a resource group for the deployment.
+				</p>
+				<blockquote>
+					<p>
+						Resource group: a container that holds related resources that you want to manage as a group
+					</p>
+				</blockquote> 
+			</section>
+			<section data-package="mainPackage">
+				<audio data-autoplay controls>
+					<source src="../../assets/slide-audio/go-sdk/mainPackage_25.mp3">
+					<a href="">
+						Download audio
+					</a>
+				</audio>
+				<h2>Main Package</h2>
+				<pre><code class="r-frame" data-trim data-line-numbers="25|26|27-28|30|31-33">
+						package main
+
+						import (
+							// import standard library packages
+							"context"
+							"encoding/json"
+							"fmt"
+							"log"
+							"os"
+
+							// import Azure SDK packages
+							"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+							"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+							"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+							"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+						)
+
+						// declare the main function
+						func main() {
+							cred, err := azidentity.NewAzureCLICredential(nil)
+							if err != nil {
+								log.Fatalf("failed to obtain CLI credential: %v", err)
+							}
+
+							ctx := context.Background()
+							subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+							resourceGroupName := "Go-SDK-VM"
+							resourceGroupLocation := "eastus2"
+
+							err = createResourceGroup(ctx, cred, subscriptionID, resourceGroupName, resourceGroupLocation)
+							if err != nil {
+								log.Fatalf("failed at createResourceGroup: %v", err)
+							}
+
+							deploymentName := "deployVirtualMachine"
+							err = deployTemplate(ctx, cred, subscriptionID, resourceGroupName, deploymentName)
+							if err != nil {
+								log.Fatalf("failed at deployTemplate: %v", err)
+							}
+						}
+
+						func createResourceGroup(
+							ctx context.Context,
+							cred azcore.TokenCredential,
+							subscriptionId string,
+							resourceGroupName string,
+							resourceGroupLocation string,
+						) error {
+							resourceGroupClient, err := armresources.NewResourceGroupsClient(subscriptionId, cred, nil)
+							if err != nil {
+								return fmt.Errorf("failed to create resource group client instance: %v", err)
+							}
+
+							boolResp, err := resourceGroupClient.CheckExistence(ctx, resourceGroupName, nil)
+							if err != nil {
+								return fmt.Errorf("error while checking if resource group already exists: %v", err)
+							} else if boolResp.Success {
+								log.Printf("requested resource group already exists and will not be created: %v", resourceGroupName)
+								return nil
+							} else {
+								log.Printf("requested resource group does not yet exist and will been created: %v", resourceGroupName)
+							}
+
+							resourceGroupResponse, err := resourceGroupClient.CreateOrUpdate(
+								ctx,
+								resourceGroupName,
+								armresources.ResourceGroup{
+									Location: to.Ptr(resourceGroupLocation),
+								},
+								nil,
+							)
+							if err != nil {
+								return fmt.Errorf("error while creating a new resource group: %v", err)
+							}
+							log.Printf("resource group has been created: %v", *resourceGroupResponse.ResourceGroup.Name)
+
+							return nil
+						}
+
+						func deployTemplate(
+							ctx context.Context,
+							cred azcore.TokenCredential,
+							subscriptionId string,
+							resourceGroupName string,
+							deploymentName string,
+						) error {
+							deploymentsClient, err := armresources.NewDeploymentsClient(subscriptionId, cred, nil)
+							if err != nil {
+								log.Fatalf("failed to create deployment client: %v", err)
+							}
+
+							boolResp, err := deploymentsClient.CheckExistence(ctx, resourceGroupName, deploymentName, nil)
+							if err != nil {
+								return fmt.Errorf("error while checking if deployment already exists: %v", err)
+							} else if boolResp.Success {
+								log.Printf("requested deployment already exists and will not be created: %v", resourceGroupName)
+								return nil
+							} else {
+								log.Printf("requested deployment does not yet exist and will been created: %v", resourceGroupName)
+							}
+
+							parameters, err := readJSON("parameters.json")
+							if err != nil {
+								log.Fatalf("read template JSON file: %v", err)
+							}
+
+							template, err := readJSON("template.json")
+							if err != nil {
+								log.Fatalf("read template JSON file: %v", err)
+							}
+
+							poller, err := deploymentsClient.BeginCreateOrUpdate(
+								ctx,
+								resourceGroupName,
+								deploymentName,
+								armresources.Deployment{
+									Properties: &armresources.DeploymentProperties{
+										Mode:       to.Ptr(armresources.DeploymentModeIncremental),
+										Parameters: parameters,
+										Template:   template,
+									},
+								},
+								nil,
+							)
+							if err != nil {
+								log.Fatalf("failed to deploy template: %v", err)
+							}
+
+							deploymentResponse, err := poller.PollUntilDone(ctx, nil)
+							if err != nil {
+								log.Fatalf("failed to pull the result: %v", err)
+							}
+							log.Printf("deployment %v was successful", *deploymentResponse.Name)
+
+							return nil
+						}
+
+						func readJSON(path string) (map[string]interface{}, error) {
+							localFile, err := os.ReadFile(path)
+							if err != nil {
+								return nil, err
+							}
+
+							// Blog post about the Map type
+							// https://go.dev/blog/maps
+							mappedJSON := make(map[string]interface{})
+
+							// Blog post about the unmarshal function
+							// https://golang.co/how-to-unmarshal-json-in-go/
+							err = json.Unmarshal(localFile, &mappedJSON)
+							if err != nil {
+								return nil, err
+							}
+
+							return mappedJSON, nil
+						}
+					</code></pre>
+			</section>
+			<section data-package="mainPackage">
+				<audio data-autoplay controls>
+					<source src="../../assets/slide-audio/go-sdk/mainPackage_42-48.mp3">
+					<a href="">
+						Download audio
+					</a>
+				</audio>
+				<h2>Main Package</h2>
+				<pre><code class="r-frame" data-trim data-line-numbers="42-48|49-52|54|55-62|64-75|77">
+						package main
+
+						import (
+							// import standard library packages
+							"context"
+							"encoding/json"
+							"fmt"
+							"log"
+							"os"
+
+							// import Azure SDK packages
+							"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+							"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+							"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+							"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+						)
+
+						// declare the main function
+						func main() {
+							cred, err := azidentity.NewAzureCLICredential(nil)
+							if err != nil {
+								log.Fatalf("failed to obtain CLI credential: %v", err)
+							}
+
+							ctx := context.Background()
+							subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+							resourceGroupName := "Go-SDK-VM"
+							resourceGroupLocation := "eastus2"
+
+							err = createResourceGroup(ctx, cred, subscriptionID, resourceGroupName, resourceGroupLocation)
+							if err != nil {
+								log.Fatalf("failed at createResourceGroup: %v", err)
+							}
+
+							deploymentName := "deployVirtualMachine"
+							err = deployTemplate(ctx, cred, subscriptionID, resourceGroupName, deploymentName)
+							if err != nil {
+								log.Fatalf("failed at deployTemplate: %v", err)
+							}
+						}
+
+						func createResourceGroup(
+							ctx context.Context,
+							cred azcore.TokenCredential,
+							subscriptionId string,
+							resourceGroupName string,
+							resourceGroupLocation string,
+						) error {
+							resourceGroupClient, err := armresources.NewResourceGroupsClient(subscriptionId, cred, nil)
+							if err != nil {
+								return fmt.Errorf("failed to create resource group client instance: %v", err)
+							}
+
+							boolResp, err := resourceGroupClient.CheckExistence(ctx, resourceGroupName, nil)
+							if err != nil {
+								return fmt.Errorf("error while checking if resource group already exists: %v", err)
+							} else if boolResp.Success {
+								log.Printf("requested resource group already exists and will not be created: %v", resourceGroupName)
+								return nil
+							} else {
+								log.Printf("requested resource group does not yet exist and will been created: %v", resourceGroupName)
+							}
+
+							resourceGroupResponse, err := resourceGroupClient.CreateOrUpdate(
+								ctx,
+								resourceGroupName,
+								armresources.ResourceGroup{
+									Location: to.Ptr(resourceGroupLocation),
+								},
+								nil,
+							)
+							if err != nil {
+								return fmt.Errorf("error while creating a new resource group: %v", err)
+							}
+							log.Printf("resource group has been created: %v", *resourceGroupResponse.ResourceGroup.Name)
+
+							return nil
+						}
+
+						func deployTemplate(
+							ctx context.Context,
+							cred azcore.TokenCredential,
+							subscriptionId string,
+							resourceGroupName string,
+							deploymentName string,
+						) error {
+							deploymentsClient, err := armresources.NewDeploymentsClient(subscriptionId, cred, nil)
+							if err != nil {
+								log.Fatalf("failed to create deployment client: %v", err)
+							}
+
+							boolResp, err := deploymentsClient.CheckExistence(ctx, resourceGroupName, deploymentName, nil)
+							if err != nil {
+								return fmt.Errorf("error while checking if deployment already exists: %v", err)
+							} else if boolResp.Success {
+								log.Printf("requested deployment already exists and will not be created: %v", resourceGroupName)
+								return nil
+							} else {
+								log.Printf("requested deployment does not yet exist and will been created: %v", resourceGroupName)
+							}
+
+							parameters, err := readJSON("parameters.json")
+							if err != nil {
+								log.Fatalf("read template JSON file: %v", err)
+							}
+
+							template, err := readJSON("template.json")
+							if err != nil {
+								log.Fatalf("read template JSON file: %v", err)
+							}
+
+							poller, err := deploymentsClient.BeginCreateOrUpdate(
+								ctx,
+								resourceGroupName,
+								deploymentName,
+								armresources.Deployment{
+									Properties: &armresources.DeploymentProperties{
+										Mode:       to.Ptr(armresources.DeploymentModeIncremental),
+										Parameters: parameters,
+										Template:   template,
+									},
+								},
+								nil,
+							)
+							if err != nil {
+								log.Fatalf("failed to deploy template: %v", err)
+							}
+
+							deploymentResponse, err := poller.PollUntilDone(ctx, nil)
+							if err != nil {
+								log.Fatalf("failed to pull the result: %v", err)
+							}
+							log.Printf("deployment %v was successful", *deploymentResponse.Name)
+
+							return nil
+						}
+
+						func readJSON(path string) (map[string]interface{}, error) {
+							localFile, err := os.ReadFile(path)
+							if err != nil {
+								return nil, err
+							}
+
+							// Blog post about the Map type
+							// https://go.dev/blog/maps
+							mappedJSON := make(map[string]interface{})
+
+							// Blog post about the unmarshal function
+							// https://golang.co/how-to-unmarshal-json-in-go/
+							err = json.Unmarshal(localFile, &mappedJSON)
+							if err != nil {
+								return nil, err
+							}
+
+							return mappedJSON, nil
+						}
+					</code></pre>
+			</section>
+			<section data-package="mainPackage">
+				<audio data-autoplay controls>
+					<source src="../../assets/slide-audio/go-sdk/mainPackage_87-90.mp3">
+					<a href="">
+						Download audio
+					</a>
+				</audio>
+				<h2>Main Package</h2>
+				<pre><code class="r-frame" data-trim data-line-numbers="87-90|92-100|102-110|139|146|150|155|112-122|129-133">
+						package main
+
+						import (
+							// import standard library packages
+							"context"
+							"encoding/json"
+							"fmt"
+							"log"
+							"os"
+
+							// import Azure SDK packages
+							"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+							"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+							"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+							"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+						)
+
+						// declare the main function
+						func main() {
+							cred, err := azidentity.NewAzureCLICredential(nil)
+							if err != nil {
+								log.Fatalf("failed to obtain CLI credential: %v", err)
+							}
+
+							ctx := context.Background()
+							subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+							resourceGroupName := "Go-SDK-VM"
+							resourceGroupLocation := "eastus2"
+
+							err = createResourceGroup(ctx, cred, subscriptionID, resourceGroupName, resourceGroupLocation)
+							if err != nil {
+								log.Fatalf("failed at createResourceGroup: %v", err)
+							}
+
+							deploymentName := "deployVirtualMachine"
+							err = deployTemplate(ctx, cred, subscriptionID, resourceGroupName, deploymentName)
+							if err != nil {
+								log.Fatalf("failed at deployTemplate: %v", err)
+							}
+						}
+
+						func createResourceGroup(
+							ctx context.Context,
+							cred azcore.TokenCredential,
+							subscriptionId string,
+							resourceGroupName string,
+							resourceGroupLocation string,
+						) error {
+							resourceGroupClient, err := armresources.NewResourceGroupsClient(subscriptionId, cred, nil)
+							if err != nil {
+								return fmt.Errorf("failed to create resource group client instance: %v", err)
+							}
+
+							boolResp, err := resourceGroupClient.CheckExistence(ctx, resourceGroupName, nil)
+							if err != nil {
+								return fmt.Errorf("error while checking if resource group already exists: %v", err)
+							} else if boolResp.Success {
+								log.Printf("requested resource group already exists and will not be created: %v", resourceGroupName)
+								return nil
+							} else {
+								log.Printf("requested resource group does not yet exist and will been created: %v", resourceGroupName)
+							}
+
+							resourceGroupResponse, err := resourceGroupClient.CreateOrUpdate(
+								ctx,
+								resourceGroupName,
+								armresources.ResourceGroup{
+									Location: to.Ptr(resourceGroupLocation),
+								},
+								nil,
+							)
+							if err != nil {
+								return fmt.Errorf("error while creating a new resource group: %v", err)
+							}
+							log.Printf("resource group has been created: %v", *resourceGroupResponse.ResourceGroup.Name)
+
+							return nil
+						}
+
+						func deployTemplate(
+							ctx context.Context,
+							cred azcore.TokenCredential,
+							subscriptionId string,
+							resourceGroupName string,
+							deploymentName string,
+						) error {
+							deploymentsClient, err := armresources.NewDeploymentsClient(subscriptionId, cred, nil)
+							if err != nil {
+								log.Fatalf("failed to create deployment client: %v", err)
+							}
+
+							boolResp, err := deploymentsClient.CheckExistence(ctx, resourceGroupName, deploymentName, nil)
+							if err != nil {
+								return fmt.Errorf("error while checking if deployment already exists: %v", err)
+							} else if boolResp.Success {
+								log.Printf("requested deployment already exists and will not be created: %v", resourceGroupName)
+								return nil
+							} else {
+								log.Printf("requested deployment does not yet exist and will been created: %v", resourceGroupName)
+							}
+
+							parameters, err := readJSON("parameters.json")
+							if err != nil {
+								log.Fatalf("read template JSON file: %v", err)
+							}
+
+							template, err := readJSON("template.json")
+							if err != nil {
+								log.Fatalf("read template JSON file: %v", err)
+							}
+
+							poller, err := deploymentsClient.BeginCreateOrUpdate(
+								ctx,
+								resourceGroupName,
+								deploymentName,
+								armresources.Deployment{
+									Properties: &armresources.DeploymentProperties{
+										Mode:       to.Ptr(armresources.DeploymentModeIncremental),
+										Parameters: parameters,
+										Template:   template,
+									},
+								},
+								nil,
+							)
+							if err != nil {
+								log.Fatalf("failed to deploy template: %v", err)
+							}
+
+							deploymentResponse, err := poller.PollUntilDone(ctx, nil)
+							if err != nil {
+								log.Fatalf("failed to pull the result: %v", err)
+							}
+							log.Printf("deployment %v was successful", *deploymentResponse.Name)
+
+							return nil
+						}
+
+						func readJSON(path string) (map[string]interface{}, error) {
+							localFile, err := os.ReadFile(path)
+							if err != nil {
+								return nil, err
+							}
+
+							// Blog post about the Map type
+							// https://go.dev/blog/maps
+							mappedJSON := make(map[string]interface{})
+
+							// Blog post about the unmarshal function
+							// https://golang.co/how-to-unmarshal-json-in-go/
+							err = json.Unmarshal(localFile, &mappedJSON)
+							if err != nil {
+								return nil, err
+							}
+
+							return mappedJSON, nil
+						}
+					</code></pre>
+			</section>
+			<section id="wrap-up">
+				<section>
+					<h2>Wrap-up</h2>
+				</section>
+				<section>
+					<p>
+						If you have followed along with me, you should be able to login to your Azure portal and see that the
+						resource group and resources from the template have been created in your subscription. If something did not
+						work correctly, check and debug your code carefully. If all your troubleshooting attempts do not yield very
+						good results, you can get a working example running by executing the code I used (after changing the
+						subscriptionID value).
+					</p>
+					<audio id="wrap-upAudio" controls data-autoplay="">
+						<source src="../../assets/slide-audio/go-sdk/wrap-up_0.mp3">
+						<a href="../../assets/slide-audio/go-sdk/wrap-up_0.mp3">Download audio</a>
+					</audio>
+				</section>
+				<section>
+					<p>
+						Finally, if you have successfully created any Azure resources throughout this presentation, make sure to
+						delete the entire resource group to avoid incurring any undesired costs in your subscription.
+					</p>
+					<audio id="wrap-upAudio" controls data-autoplay>
+						<source src="../../assets/slide-audio/go-sdk/wrap-up_1.mp3">
+						<a href="../../assets/slide-audio/go-sdk/wrap-up_1.mp3">Download audio</a>
+					</audio>
+				</section>
+			</section>
+		</div>
+	</div>
+
+	<script src="../../dist/reveal.js"></script>
+	<script src="../../plugin/highlight/highlight.js"></script>
+	<script>
+		Reveal.initialize({
+			plugins: [RevealHighlight],
+			progress: true,
+			// Activate the scroll view
+			view: 'scroll',
+			// Force the scrollbar to remain visible
+			scrollProgress: true,
+		});
+	</script>
+	<script>
+		let codeLineHighlights;
+		let currentSectionName;
+		let currentAudio;
+		Reveal.on('ready', event => {
+			codeLineHighlights = Array.from(document.querySelectorAll(`[data-line-numbers]`)).map(el => el.attributes["data-line-numbers"].value)
+		});
+		Reveal.on('slidechanged', event => {
+			currentSectionName = event.currentSlide.dataset.package;
+			currentAudio = event.currentSlide.children.item("audio");
+		});
+		Reveal.on('fragmentshown', event => {
+			const currentLine = event.fragment.attributes["data-line-numbers"].value
+			fragmentId = currentSectionName + "_" + currentLine
+			fragmentChangeHandler(fragmentId)
+		});
+		Reveal.on('fragmenthidden', event => {
+			const currentLine = event.fragment.attributes["data-line-numbers"].value
+			const nextIndex = codeLineHighlights.indexOf(event.fragment.attributes["data-line-numbers"].value) - 1;
+			const nextValue = codeLineHighlights[nextIndex];
+			fragmentId = currentSectionName + "_" + nextValue
+			fragmentChangeHandler(fragmentId)
+		});
+		function fragmentChangeHandler(fragmentId) {
+			currentAudio.src = `../../assets/slide-audio/go-sdk/${fragmentId}.mp3`
+			currentAudio.load()
+			currentAudio.play()
+		}
+	</script>
+</body>
+
+</html>
