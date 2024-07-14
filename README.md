@@ -15,7 +15,8 @@ The following code was all I needed to change to make the presentation scrollabl
 ```
 
 I created this SPA to improve the way coding is taught and learned, but it can also be used for other topics as desired. The SPA supports various types of engaging media, including 2D and 3D images, audio recordings, and iframes. Animation is used sparingly to highlight important UI elements. Since the platform is built on top of the RevealJS presentation framework, there is documentation that makes it possible to make changes to the content with only a basic understanding of HTML.
-Unique ability to explore text line-by-line
+
+# Unique ability to explore text line-by-line
 When I created this SPA, I wanted to take a unique approach to exploring and explaining code. I decided to walk the audience through each line of code, highlighting the exact part being explained. It was a challenge to keep the voice recording and code highlighting in sync, but once I got the program logic right, updating and adding to the content became easy.
 
 # Focus on education and user experience standards
